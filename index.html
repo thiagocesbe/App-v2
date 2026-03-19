@@ -3,15 +3,12 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Contas PRO">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon.png">
-
 <title>Controle de Contas PRO</title>
-
 <style>
 body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;margin:0;background:#0f0f10;color:#fff;font-size:85%}
 header{padding:14px;font-size:18px;font-weight:bold}
@@ -56,10 +53,8 @@ input[type="color"]{width:32px;height:32px;border-radius:50%;border:none}
 
 <script>
 let data = JSON.parse(localStorage.getItem('financeAppPRO')) || [];
-let dragItem = null;
-let touchTimer = null;
+let dragIndex = null;
 
-// título persistente
 let titleSaved = localStorage.getItem('appTitle') || 'Meu Controle';
 const titleEl=document.getElementById('title');
 titleEl.innerText=titleSaved;
@@ -133,28 +128,37 @@ save();render();}
 
 function deleteItem(ai,si,ii){data[ai].sections[si].items.splice(ii,1);save();render();}
 
-// DRAG SIMPLES E ESTÁVEL
+// DRAG REAL FUNCIONANDO
 function touchStart(ai,si,ii){
-  touchTimer = setTimeout(()=>{
-    dragItem = {ai,si,ii};
-  },200);
+  dragIndex = { ai, si, ii };
 }
 
-function touchEnd(ai,si,ii){
-  clearTimeout(touchTimer);
+function touchMove(e, ai, si){
+  if(!dragIndex) return;
 
-  if(!dragItem){
-    startEdit(ai,si,ii);
-    return;
+  const touch = e.touches[0];
+  const elements = document.elementsFromPoint(touch.clientX, touch.clientY);
+
+  const target = elements.find(el => el.classList?.contains('item'));
+  if(!target) return;
+
+  const parent = target.parentNode;
+  const children = Array.from(parent.querySelectorAll('.item'));
+  const newIndex = children.indexOf(target);
+
+  const arr = data[ai].sections[si].items;
+
+  if(newIndex >= 0 && newIndex !== dragIndex.ii){
+    const moved = arr.splice(dragIndex.ii, 1)[0];
+    arr.splice(newIndex, 0, moved);
+    dragIndex.ii = newIndex;
+    render();
   }
+}
 
-  let arr = data[ai].sections[si].items;
-  let moved = arr.splice(dragItem.ii,1)[0];
-  arr.splice(ii,0,moved);
-
-  dragItem = null;
+function touchEnd(){
+  dragIndex = null;
   save();
-  render();
 }
 
 function render(){
@@ -192,7 +196,8 @@ ${sec.name==='Contas Parceladas'?`<input id='parc-${ai}-${si}' inputmode='numeri
 }else{
 secDiv.innerHTML+=`<div class='item'
  ontouchstart='touchStart(${ai},${si},${ii})'
- ontouchend='touchEnd(${ai},${si},${ii})'>
+ ontouchmove='touchMove(event, ${ai}, ${si})'
+ ontouchend='touchEnd()'>
 <span onclick='startEdit(${ai},${si},${ii})'>${it.name}${parcelaTxt}${dueTxt}</span>
 <span>
 ${brl(it.value)}
