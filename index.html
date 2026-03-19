@@ -26,8 +26,9 @@ header{padding:14px;font-size:18px;font-weight:bold}
 input,button{width:100%;margin:4px 0;padding:8px;border-radius:8px;border:none;font-size:14px}
 button{background:#fff;color:#000;font-weight:bold}
 .small{font-size:11px;opacity:.7}
-.delete-text{color:#ff4d4d;font-size:11px;margin-top:4px}
+.delete-text{color:#ff4d4d;font-size:11px;margin-top:4px;cursor:pointer}
 .account-header{cursor:pointer}
+.arrow{margin-left:6px;font-size:12px;cursor:pointer}
 
 input[type="color"]{width:32px;height:32px;border-radius:50%;border:none}
 </style>
@@ -85,20 +86,25 @@ function defaultSections(){return[
 function addAccount(){
 let name = document.getElementById('accountName').value.trim();
 let color = document.getElementById('accountColor').value || '#ffffff';
+if(!name){ alert('Digite um nome'); return; }
 
-if(!name){
- alert('Digite um nome para a conta');
- return;
-}
-
-data.push({name,color,sections:defaultSections(),editing:null,showForm:{}});
+data.push({name,color,sections:defaultSections(),editing:null,showForm:{},editingAccount:false});
 
 document.getElementById('accountName').value='';
 save();render();
 }
 
+function toggleAccountEdit(ai){data[ai].editingAccount=!data[ai].editingAccount;render();}
+function deleteAccount(ai){data.splice(ai,1);save();render();}
+
 function toggleForm(ai,si){data[ai].showForm[si]=!data[ai].showForm[si];data[ai].editing=null;render();}
 function startEdit(ai,si,ii){data[ai].editing={si,ii};render();}
+
+function nextParcela(ai,si,ii){
+let item=data[ai].sections[si].items[ii];
+if(item.parcelas && item.atual < item.parcelas){item.atual++;}
+save();render();
+}
 
 function saveItem(ai,si,ii=null){
 let name=document.getElementById(`name-${ai}-${si}`).value;
@@ -109,14 +115,15 @@ if(data[ai].sections[si].name==='Contas Recorrentes'){
 due=document.getElementById(`due-${ai}-${si}`).value;
 }
 if(data[ai].sections[si].name==='Contas Parceladas'){
-parcelas=parseInt(document.getElementById(`parc-${ai}-${si}`).value)||1;
+parcelas=parseInt(document.getElementById(`parc-${ai}-${si}`)?.value) || (ii!==null ? data[ai].sections[si].items[ii].parcelas : 1);
 }
 
 if(!name||!value)return;
 
 if(ii!==null){
 let it=data[ai].sections[si].items[ii];
-it.name=name;it.value=value;it.due=due;it.parcelas=parcelas;
+it.name=name;it.value=value;it.due=due;
+if(parcelas) it.parcelas=parcelas;
 }else{
 data[ai].sections[si].items.push({name,value,due,parcelas,atual:1});
 }
@@ -127,30 +134,9 @@ save();render();}
 
 function deleteItem(ai,si,ii){data[ai].sections[si].items.splice(ii,1);save();render();}
 
-function touchStart(ai,si,ii){
- touchTimer = setTimeout(()=>{
-  drag = {ai,si,ii};
- },200);
-}
-
-function touchMove(ai,si,ii){
- if(!drag) return;
- let arr=data[ai].sections[si].items;
- let moved=arr.splice(drag.ii,1)[0];
- arr.splice(ii,0,moved);
- drag={ai,si,ii};
- render();
-}
-
-function touchEnd(ai,si,ii){
- if(!drag){
-  startEdit(ai,si,ii);
- } else {
-  drag=null;
-  save();
- }
- clearTimeout(touchTimer);
-}
+function touchStart(ai,si,ii){touchTimer=setTimeout(()=>{drag={ai,si,ii};},200);} 
+function touchMove(ai,si,ii){if(!drag)return;let arr=data[ai].sections[si].items;let moved=arr.splice(drag.ii,1)[0];arr.splice(ii,0,moved);drag={ai,si,ii};render();}
+function touchEnd(ai,si,ii){if(!drag){startEdit(ai,si,ii);}else{drag=null;save();}clearTimeout(touchTimer);} 
 
 function render(){
 let el=document.getElementById('accounts');el.innerHTML='';
@@ -160,7 +146,9 @@ data.forEach((acc,ai)=>{
 let accTotal=0;
 let card=document.createElement('div');card.className='card';
 
-card.innerHTML=`<div class='account-header' style="color:${acc.color}">${acc.name}</div>`;
+let header=`<div class='account-header' style="color:${acc.color}" onclick="toggleAccountEdit(${ai})">${acc.name}</div>`;
+if(acc.editingAccount){header+=`<div class='delete-text' onclick='deleteAccount(${ai})'>Excluir conta</div>`;}
+card.innerHTML=header;
 
 acc.sections.forEach((sec,si)=>{
 let secTotal=0;
@@ -169,16 +157,16 @@ secDiv.innerHTML=`<div class='section-header'><strong>${sec.name}</strong><span 
 
 sec.items.forEach((it,ii)=>{
 secTotal+=it.value;
-
 let parcelaTxt='';
 if(it.parcelas){let a=String(it.atual).padStart(2,'0');let t=String(it.parcelas).padStart(2,'0');parcelaTxt=` (${a}/${t})`;}
 let dueTxt=(it.due && sec.name==='Contas Recorrentes')?`<div class='small'>dia ${it.due}</div>`:'';
 
 if(acc.editing && acc.editing.si===si && acc.editing.ii===ii){
 secDiv.innerHTML+=`<div>
-<input id='name-${ai}-${si}' value='${it.name}' placeholder='Descrição'>
-<input id='value-${ai}-${si}' value='${it.value}' placeholder='R$'>
-${sec.name==='Contas Recorrentes'?`<input id='due-${ai}-${si}' value='${it.due||''}' placeholder='Vencimento'>`:''}
+<input id='name-${ai}-${si}' value='${it.name}'>
+<input id='value-${ai}-${si}' inputmode='decimal' value='${it.value}'>
+${sec.name==='Contas Recorrentes'?`<input id='due-${ai}-${si}' value='${it.due||''}'>`:''}
+${sec.name==='Contas Parceladas'?`<input id='parc-${ai}-${si}' value='${it.parcelas||''}'>`:''}
 <button onclick='saveItem(${ai},${si},${ii})'>Salvar</button>
 <div class='delete-text' onclick='deleteItem(${ai},${si},${ii})'>Excluir</div>
 </div>`;
@@ -188,7 +176,7 @@ secDiv.innerHTML+=`<div class='item'
  ontouchmove='touchMove(${ai},${si},${ii})'
  ontouchend='touchEnd(${ai},${si},${ii})'>
 <span>${it.name}${parcelaTxt}${dueTxt}</span>
-<span>${brl(it.value)}</span>
+<span>${brl(it.value)} ${it.parcelas?`<span class='arrow' onclick='event.stopPropagation(); nextParcela(${ai},${si},${ii})'>➡️</span>`:''}</span>
 </div>`;
 }
 });
@@ -196,7 +184,7 @@ secDiv.innerHTML+=`<div class='item'
 if(acc.showForm[si]){
 secDiv.innerHTML+=`<div>
 <input id='name-${ai}-${si}' placeholder='Descrição'>
-<input id='value-${ai}-${si}' placeholder='R$'>
+<input id='value-${ai}-${si}' inputmode='decimal' placeholder='R$'>
 ${sec.name==='Contas Recorrentes'?`<input id='due-${ai}-${si}' placeholder='Vencimento'>`:''}
 ${sec.name==='Contas Parceladas'?`<input id='parc-${ai}-${si}' placeholder='Parcelas'>`:''}
 <button onclick='saveItem(${ai},${si})'>Salvar</button>
