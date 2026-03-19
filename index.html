@@ -189,7 +189,7 @@ secDiv.innerHTML+=`<div>
 <input id='name-${ai}-${si}' placeholder='Descrição'>
 <input id='value-${ai}-${si}' inputmode='decimal' placeholder='R$'>
 ${sec.name==='Contas Recorrentes'?`<input id='due-${ai}-${si}' placeholder='Vencimento' inputmode='numeric'>`:''}
-${sec.name==='Contas Parceladas'?`<input id='parc-${ai}-${si}' placeholder='Parcelas'>`:''}
+${sec.name==='Contas Parceladas'?`<input id='parc-${ai}-${si}' placeholder='Parcelas' inputmode='numeric'>`:''}
 <button onclick='saveItem(${ai},${si})'>Salvar</button>
 </div>`;
 }
