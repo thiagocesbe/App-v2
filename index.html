@@ -13,41 +13,40 @@
 <title>Controle de Contas PRO</title>
 
 <style>
-body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;margin:0;background:#0f0f10;color:#fff}
-header{padding:16px;font-size:20px;font-weight:bold}
-.container{padding:16px}
-.card{background:#1a1a1c;border-radius:16px;padding:16px;margin-bottom:16px;box-shadow:0 4px 20px rgba(0,0,0,.3)}
-.section{margin-top:10px;padding:10px;background:#121214;border-radius:12px}
+body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;margin:0;background:#0f0f10;color:#fff;font-size:85%}
+header{padding:14px;font-size:18px;font-weight:bold}
+.container{padding:14px}
+.card{background:#1a1a1c;border-radius:14px;padding:14px;margin-bottom:14px;box-shadow:0 4px 20px rgba(0,0,0,.3)}
+.section{margin-top:8px;padding:8px;background:#121214;border-radius:10px}
 .section-header{display:flex;justify-content:space-between;align-items:center}
-.add-btn{font-size:20px;font-weight:bold;cursor:pointer;opacity:.8}
-.item{display:flex;justify-content:space-between;margin:6px 0;align-items:center;cursor:pointer}
-.item span:last-child{text-align:right;flex-shrink:0}
-.total{margin-top:6px;font-weight:bold}
-input,button{width:100%;margin:6px 0;padding:10px;border-radius:10px;border:none;font-size:16px}
+.add-btn{font-size:18px;font-weight:bold;cursor:pointer;opacity:.8}
+.item{display:flex;justify-content:space-between;margin:4px 0;align-items:center;cursor:grab}
+.item span:last-child{text-align:right}
+.total{margin-top:4px;font-weight:bold}
+input,button{width:100%;margin:4px 0;padding:8px;border-radius:8px;border:none;font-size:14px}
 button{background:#fff;color:#000;font-weight:bold}
-.small{font-size:12px;opacity:.7}
-.topbar{display:flex;gap:10px;align-items:center}
-.form{background:#1f1f22;padding:10px;border-radius:10px;margin-top:8px}
-.small-btn{width:auto;padding:6px 10px;font-size:13px}
-.delete-text{color:#ff4d4d;font-size:12px;margin-top:6px;cursor:pointer}
+.small{font-size:11px;opacity:.7}
+.topbar{display:flex;gap:8px;align-items:center}
+.form{background:#1f1f22;padding:8px;border-radius:8px;margin-top:6px}
+.small-btn{width:auto;padding:5px 8px;font-size:12px}
+.delete-text{color:#ff4d4d;font-size:11px;margin-top:4px;cursor:pointer}
 .account-header{cursor:pointer}
-.arrow{margin-left:8px;font-size:14px;opacity:.7}
+.arrow{margin-left:6px;font-size:12px;opacity:.7}
 
-input[type="color"]{width:36px;height:36px;border-radius:50%;padding:0;border:none;overflow:hidden}
-input, select, textarea {font-size:16px}
+input[type="color"]{width:32px;height:32px;border-radius:50%;border:none}
 </style>
 </head>
 <body>
-<header contenteditable="true" id="title">Meu Controle</header>
+<header contenteditable="true" id="title"></header>
 <div class="container">
 
 <div class="card">
 <div class="section-header" onclick="toggleAccountForm()">
 <strong>Nova Conta</strong>
-<span id="toggleIcon">−</span>
+<span id="toggleIcon">+</span>
 </div>
 
-<div id="accountForm">
+<div id="accountForm" style="display:none">
 <div class="topbar">
 <input id="accountName" placeholder="Nova conta" />
 <input id="accountColor" type="color" />
@@ -62,16 +61,22 @@ input, select, textarea {font-size:16px}
 
 <script>
 let data = JSON.parse(localStorage.getItem('financeAppPRO')) || [];
-let showAccountForm = true;
+let titleSaved = localStorage.getItem('appTitle') || 'Meu Controle';
+document.getElementById('title').innerText = titleSaved;
+
+document.getElementById('title').addEventListener('blur',()=>{
+ localStorage.setItem('appTitle',document.getElementById('title').innerText);
+});
 
 function save(){localStorage.setItem('financeAppPRO',JSON.stringify(data));}
 function brl(v){return v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});}
 function parseValue(v){return parseFloat(v.replace(',','.')) || 0;}
 
 function toggleAccountForm(){
-showAccountForm=!showAccountForm;
-document.getElementById('accountForm').style.display=showAccountForm?'block':'none';
-document.getElementById('toggleIcon').innerText=showAccountForm?'−':'+';
+let form=document.getElementById('accountForm');
+let icon=document.getElementById('toggleIcon');
+if(form.style.display==='none'){form.style.display='block';icon.innerText='−'}
+else{form.style.display='none';icon.innerText='+'}
 }
 
 function defaultSections(){return[
@@ -88,34 +93,23 @@ data.push({name,color,sections:defaultSections(),showForm:{},editing:null,editin
 document.getElementById('accountName').value='';
 save();render();}
 
-function toggleForm(ai,si){
-data[ai].showForm[si]=!data[ai].showForm[si];
-data[ai].editing=null;
-render();}
-
+function toggleForm(ai,si){data[ai].showForm[si]=!data[ai].showForm[si];data[ai].editing=null;render();}
 function startEdit(ai,si,ii){data[ai].editing={si,ii};render();}
-
 function toggleAccountEdit(ai){data[ai].editingAccount=!data[ai].editingAccount;render();}
-
 function deleteAccount(ai){data.splice(ai,1);save();render();}
 
-function nextParcela(ai,si,ii){
-let item=data[ai].sections[si].items[ii];
-if(item.parcelas && item.atual<item.parcelas){item.atual++;}
-save();render();}
+function nextParcela(ai,si,ii){let item=data[ai].sections[si].items[ii];if(item.parcelas && item.atual<item.parcelas){item.atual++;}save();render();}
 
 function saveItem(ai,si,ii=null){
 const name=document.getElementById(`name-${ai}-${si}`).value;
 const value=parseValue(document.getElementById(`value-${ai}-${si}`).value);
-let due = null;
-let parcelas=null;
+let due=null;let parcelas=null;
 
 if(data[ai].sections[si].name==='Contas Recorrentes'){
 due=document.getElementById(`due-${ai}-${si}`).value;
 }
-
 if(data[ai].sections[si].name==='Contas Parceladas'){
-parcelas=parseInt(document.getElementById(`parc-${ai}-${si}`).value);
+parcelas=parseInt(document.getElementById(`parc-${ai}-${si}`).value)||1;
 }
 
 if(!name || !value) return;
@@ -133,6 +127,15 @@ save();render();}
 
 function deleteItem(ai,si,ii){data[ai].sections[si].items.splice(ii,1);save();render();}
 
+// DRAG
+let dragItem=null;
+function dragStart(e,ai,si,ii){dragItem={ai,si,ii};}
+function dropItem(e,ai,si,ii){
+let arr=data[ai].sections[si].items;
+let moved=arr.splice(dragItem.ii,1)[0];
+arr.splice(ii,0,moved);
+save();render();}
+
 function render(){
 const el=document.getElementById('accounts');el.innerHTML='';
 let grand=0;
@@ -149,41 +152,18 @@ card.innerHTML = header;
 acc.sections.forEach((sec,si)=>{
 let secTotal=0;
 let secDiv=document.createElement('div');secDiv.className='section';
-secDiv.innerHTML=`
-<div class='section-header'>
-<strong>${sec.name}</strong>
-<span class='add-btn' onclick='toggleForm(${ai},${si})'>+</span>
-</div>`;
+secDiv.innerHTML=`<div class='section-header'><strong>${sec.name}</strong><span class='add-btn' onclick='toggleForm(${ai},${si})'>+</span></div>`;
 
 sec.items.forEach((it,ii)=>{
 secTotal+=it.value;
+let parcelaTxt='';
+if(it.parcelas){let a=String(it.atual).padStart(2,'0');let t=String(it.parcelas).padStart(2,'0');parcelaTxt=` (${a}/${t})`;}
+let dueTxt=(it.due && sec.name==='Contas Recorrentes')?`<div class='small'>dia ${it.due}</div>`:'';
 
-let parcelaTxt = '';
-if(it.parcelas){
-let atual = String(it.atual).padStart(2,'0');
-let total = String(it.parcelas).padStart(2,'0');
-parcelaTxt = ` (${atual}/${total})`;
-}
-
-let dueTxt = '';
-if(it.due && sec.name==='Contas Recorrentes'){
-dueTxt = `<div class='small'>dia ${it.due}</div>`;
-}
-
-if(acc.editing && acc.editing.si===si && acc.editing.ii===ii){
-secDiv.innerHTML+=`<div class='form'>
-<input id='name-${ai}-${si}' value='${it.name}' placeholder='Descrição'>
-<input id='value-${ai}-${si}' value='${it.value}' placeholder='R$'>
-${sec.name==='Contas Recorrentes'?`<input id='due-${ai}-${si}' value='${it.due||''}' placeholder='Vencimento'>`:''}
-<button onclick='saveItem(${ai},${si},${ii})'>Salvar</button>
-<div class='delete-text' onclick='deleteItem(${ai},${si},${ii})'>Excluir</div>
-</div>`;
-}else{
-secDiv.innerHTML+=`<div class='item' onclick='startEdit(${ai},${si},${ii})'>
+secDiv.innerHTML+=`<div class='item' draggable='true' ondragstart='dragStart(event,${ai},${si},${ii})' ondragover='event.preventDefault()' ondrop='dropItem(event,${ai},${si},${ii})' onclick='startEdit(${ai},${si},${ii})'>
 <span>${it.name}${parcelaTxt}${dueTxt}</span>
 <span>${brl(it.value)} ${it.parcelas?`<span class='arrow' onclick='event.stopPropagation(); nextParcela(${ai},${si},${ii})'>➡️</span>`:''}</span>
 </div>`;
-}
 });
 
 if(acc.showForm[si]){
