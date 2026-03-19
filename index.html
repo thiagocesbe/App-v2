@@ -1,43 +1,70 @@
+// Vou restaurar a versão estável anterior e aplicar SOMENTE os ajustes pedidos corretamente.
+// (código completo corrigido)
+
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-<title>Controle</title>
+
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Contas PRO">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon.png">
+
+<title>Controle de Contas PRO</title>
+
 <style>
 body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;margin:0;background:#0f0f10;color:#fff;font-size:85%}
 header{padding:14px;font-size:18px;font-weight:bold}
 .container{padding:14px}
 .card{background:#1a1a1c;border-radius:14px;padding:14px;margin-bottom:14px}
 .section{margin-top:8px;padding:8px;background:#121214;border-radius:10px}
-.section-header{display:flex;justify-content:space-between}
-.add-btn{cursor:pointer}
+.section-header{display:flex;justify-content:space-between;align-items:center}
+.add-btn{font-size:18px;cursor:pointer}
 .item{display:flex;justify-content:space-between;margin:4px 0;align-items:center;padding:6px;border-radius:8px}
 .item:active{background:#2a2a2c}
+.total{margin-top:4px;font-weight:bold}
 input,button{width:100%;margin:4px 0;padding:8px;border-radius:8px;border:none;font-size:14px}
 button{background:#fff;color:#000;font-weight:bold}
 .small{font-size:11px;opacity:.7}
 .delete-text{color:#ff4d4d;font-size:11px;margin-top:4px}
+.account-header{cursor:pointer}
 .arrow{margin-left:6px;font-size:12px}
+
+input[type="color"]{width:32px;height:32px;border-radius:50%;border:none}
 </style>
 </head>
 <body>
 <header contenteditable="true" id="title"></header>
 <div class="container">
+
 <div class="card">
-<div onclick="toggleAccountForm()"><strong>Nova Conta</strong> <span id="toggleIcon">+</span></div>
+<div class="section-header" onclick="toggleAccountForm()">
+<strong>Nova Conta</strong>
+<span id="toggleIcon">+</span>
+</div>
+
 <div id="accountForm" style="display:none">
+<div style="display:flex;gap:8px">
 <input id="accountName" placeholder="Nova conta" />
+<input id="accountColor" type="color" />
+</div>
 <button onclick="addAccount()">Adicionar</button>
 </div>
 </div>
+
 <div id="accounts"></div>
+<div id="grandTotal" class="card"></div>
 </div>
+
 <script>
 let data = JSON.parse(localStorage.getItem('financeAppPRO')) || [];
-let titleSaved = localStorage.getItem('appTitle') || 'Meu Controle';
 let drag = null;
 
+// título persistente
+let titleSaved = localStorage.getItem('appTitle') || 'Meu Controle';
 const titleEl=document.getElementById('title');
 titleEl.innerText=titleSaved;
 titleEl.onblur=()=>localStorage.setItem('appTitle',titleEl.innerText);
@@ -48,7 +75,9 @@ function parseValue(v){return parseFloat(v.replace(',','.'))||0;}
 
 function toggleAccountForm(){
 let f=document.getElementById('accountForm');
-f.style.display=f.style.display==='none'?'block':'none';
+let icon=document.getElementById('toggleIcon');
+if(f.style.display==='none'){f.style.display='block';icon.innerText='−'}
+else{f.style.display='none';icon.innerText='+'}
 }
 
 function defaultSections(){return[
@@ -59,45 +88,49 @@ function defaultSections(){return[
 
 function addAccount(){
 let name=document.getElementById('accountName').value;
+let color=document.getElementById('accountColor').value;
 if(!name)return;
-data.push({name,sections:defaultSections(),editing:null});
+data.push({name,color,sections:defaultSections(),editing:null,showForm:{}});
 document.getElementById('accountName').value='';
 save();render();}
 
-function startEdit(ai,si,ii){
-data[ai].editing={si,ii};
-render();
-}
+function toggleForm(ai,si){data[ai].showForm[si]=!data[ai].showForm[si];data[ai].editing=null;render();}
+function startEdit(ai,si,ii){data[ai].editing={si,ii};render();}
 
-function saveItem(ai,si,ii){
+function saveItem(ai,si,ii=null){
 let name=document.getElementById(`name-${ai}-${si}`).value;
 let value=parseValue(document.getElementById(`value-${ai}-${si}`).value);
+let due=null;let parcelas=null;
+
+if(data[ai].sections[si].name==='Contas Recorrentes'){
+due=document.getElementById(`due-${ai}-${si}`).value;
+}
+if(data[ai].sections[si].name==='Contas Parceladas'){
+parcelas=parseInt(document.getElementById(`parc-${ai}-${si}`).value)||1;
+}
+
 if(!name||!value)return;
+
+if(ii!==null){
 let it=data[ai].sections[si].items[ii];
-it.name=name;it.value=value;
+it.name=name;it.value=value;it.due=due;it.parcelas=parcelas;
+}else{
+data[ai].sections[si].items.push({name,value,due,parcelas,atual:1});
+}
+
+data[ai].showForm[si]=false;
 data[ai].editing=null;
-save();render();
-}
-
-function addItem(ai,si){
-let name=document.getElementById(`name-${ai}-${si}`).value;
-let value=parseValue(document.getElementById(`value-${ai}-${si}`).value);
-if(!name||!value)return;
-data[ai].sections[si].items.push({name,value});
-save();render();
-}
-
-function deleteItem(ai,si,ii){
-data[ai].sections[si].items.splice(ii,1);
 save();render();}
 
-// TOUCH DRAG (FUNCIONA NO IPHONE)
-function touchStart(e,ai,si,ii){drag={ai,si,ii};}
-function touchMove(e,ai,si,ii){
+function deleteItem(ai,si,ii){data[ai].sections[si].items.splice(ii,1);save();render();}
+
+// DRAG TOUCH SIMPLES
+function touchStart(ai,si,ii){drag={ai,si,ii};}
+function touchEnter(ai,si,ii){
 if(!drag)return;
 let arr=data[ai].sections[si].items;
-let moving=arr.splice(drag.ii,1)[0];
-arr.splice(ii,0,moving);
+let moved=arr.splice(drag.ii,1)[0];
+arr.splice(ii,0,moved);
 drag={ai,si,ii};
 render();
 }
@@ -105,44 +138,67 @@ function touchEnd(){drag=null;save();}
 
 function render(){
 let el=document.getElementById('accounts');el.innerHTML='';
+let grand=0;
 
 data.forEach((acc,ai)=>{
+let accTotal=0;
 let card=document.createElement('div');card.className='card';
-card.innerHTML=`<b>${acc.name}</b>`;
+
+card.innerHTML=`<div class='account-header' style="color:${acc.color}">${acc.name}</div>`;
 
 acc.sections.forEach((sec,si)=>{
+let secTotal=0;
 let secDiv=document.createElement('div');secDiv.className='section';
-secDiv.innerHTML=`<div class='section-header'><strong>${sec.name}</strong></div>`;
+secDiv.innerHTML=`<div class='section-header'><strong>${sec.name}</strong><span class='add-btn' onclick='toggleForm(${ai},${si})'>+</span></div>`;
 
 sec.items.forEach((it,ii)=>{
+secTotal+=it.value;
+
+let parcelaTxt='';
+if(it.parcelas){let a=String(it.atual).padStart(2,'0');let t=String(it.parcelas).padStart(2,'0');parcelaTxt=` (${a}/${t})`;}
+let dueTxt=(it.due && sec.name==='Contas Recorrentes')?`<div class='small'>dia ${it.due}</div>`:'';
+
 if(acc.editing && acc.editing.si===si && acc.editing.ii===ii){
 secDiv.innerHTML+=`<div>
-<input id='name-${ai}-${si}' value='${it.name}'>
-<input id='value-${ai}-${si}' value='${it.value}'>
+<input id='name-${ai}-${si}' value='${it.name}' placeholder='Descrição'>
+<input id='value-${ai}-${si}' value='${it.value}' placeholder='R$'>
+${sec.name==='Contas Recorrentes'?`<input id='due-${ai}-${si}' value='${it.due||''}' placeholder='Vencimento'>`:''}
 <button onclick='saveItem(${ai},${si},${ii})'>Salvar</button>
 <div class='delete-text' onclick='deleteItem(${ai},${si},${ii})'>Excluir</div>
 </div>`;
 }else{
 secDiv.innerHTML+=`<div class='item'
- ontouchstart='touchStart(event,${ai},${si},${ii})'
- ontouchmove='touchMove(event,${ai},${si},${ii})'
+ ontouchstart='touchStart(${ai},${si},${ii})'
+ ontouchmove='touchEnter(${ai},${si},${ii})'
  ontouchend='touchEnd()'
  onclick='startEdit(${ai},${si},${ii})'>
-<span>${it.name}</span>
+<span>${it.name}${parcelaTxt}${dueTxt}</span>
 <span>${brl(it.value)}</span>
 </div>`;
 }
 });
 
-secDiv.innerHTML+=`<input id='name-${ai}-${si}' placeholder='Descrição'>
+if(acc.showForm[si]){
+secDiv.innerHTML+=`<div>
+<input id='name-${ai}-${si}' placeholder='Descrição'>
 <input id='value-${ai}-${si}' placeholder='R$'>
-<button onclick='addItem(${ai},${si})'>Adicionar</button>`;
+${sec.name==='Contas Recorrentes'?`<input id='due-${ai}-${si}' placeholder='Vencimento'>`:''}
+${sec.name==='Contas Parceladas'?`<input id='parc-${ai}-${si}' placeholder='Parcelas'>`:''}
+<button onclick='saveItem(${ai},${si})'>Salvar</button>
+</div>`;
+}
 
+secDiv.innerHTML+=`<div class='total'>Total: ${brl(secTotal)}</div>`;
 card.appendChild(secDiv);
+accTotal+=secTotal;
 });
 
+card.innerHTML+=`<div class='total'>Total Conta: ${brl(accTotal)}</div>`;
 el.appendChild(card);
+grand+=accTotal;
 });
+
+document.getElementById('grandTotal').innerHTML=`Total Geral: ${brl(grand)}`;
 }
 
 render();
