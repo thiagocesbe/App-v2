@@ -188,7 +188,7 @@ if(acc.showForm[si]){
 secDiv.innerHTML+=`<div>
 <input id='name-${ai}-${si}' placeholder='Descrição'>
 <input id='value-${ai}-${si}' inputmode='decimal' placeholder='R$'>
-${sec.name==='Contas Recorrentes'?`<input id='due-${ai}-${si}' placeholder='Vencimento'>`:''}
+${sec.name==='Contas Recorrentes'?`<input id='due-${ai}-${si}' placeholder='Vencimento' inputmode='numeric'>`:''}
 ${sec.name==='Contas Parceladas'?`<input id='parc-${ai}-${si}' placeholder='Parcelas'>`:''}
 <button onclick='saveItem(${ai},${si})'>Salvar</button>
 </div>`;
