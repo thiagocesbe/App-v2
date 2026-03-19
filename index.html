@@ -175,8 +175,11 @@ secDiv.innerHTML+=`<div class='item'
  ontouchstart='touchStart(${ai},${si},${ii})'
  ontouchmove='touchMove(${ai},${si},${ii})'
  ontouchend='touchEnd(${ai},${si},${ii})'>
-<span>${it.name}${parcelaTxt}${dueTxt}</span>
-<span>${brl(it.value)} ${it.parcelas?`<span class='arrow' onclick='event.stopPropagation(); nextParcela(${ai},${si},${ii})'>➡️</span>`:''}</span>
+<span onclick='startEdit(${ai},${si},${ii})'>${it.name}${parcelaTxt}${dueTxt}</span>
+<span>
+  ${brl(it.value)}
+  ${it.parcelas?`<span class='arrow' onclick='event.stopPropagation(); nextParcela(${ai},${si},${ii})'>➡️</span>`:''}
+</span>
 </div>`;
 }
 });
