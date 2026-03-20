@@ -10,23 +10,24 @@
 <link rel="apple-touch-icon" href="icon.png">
 <title>Controle de Contas PRO</title>
 <style>
-body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;margin:0;background:#0f0f10;color:#fff;font-size:85%}
-header{padding:14px;font-size:18px;font-weight:bold}
-.container{padding:14px}
-.card{background:#1a1a1c;border-radius:14px;padding:14px;margin-bottom:14px}
-.section{margin-top:8px;padding:8px;background:#121214;border-radius:10px}
+/* REDUÇÃO DE ESPAÇO ~20% */
+body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;margin:0;background:#0f0f10;color:#fff;font-size:80%}
+header{padding:11px;font-size:16px;font-weight:bold}
+.container{padding:11px}
+.card{background:#1a1a1c;border-radius:12px;padding:11px;margin-bottom:11px}
+.section{margin-top:6px;padding:6px;background:#121214;border-radius:8px}
 .section-header{display:flex;justify-content:space-between;align-items:center}
 .add-btn{cursor:pointer}
-.item{display:flex;justify-content:space-between;margin:4px 0;align-items:center;padding:8px;border-radius:8px}
+.item{display:flex;justify-content:space-between;margin:3px 0;align-items:center;padding:6px;border-radius:6px}
 .item:active{background:#2a2a2c}
-.total{margin-top:4px;font-weight:bold}
-input,button{width:100%;margin:4px 0;padding:8px;border-radius:8px;border:none;font-size:14px}
+.total{margin-top:3px;font-weight:bold}
+input,button{width:100%;margin:3px 0;padding:6px;border-radius:6px;border:none;font-size:13px}
 button{background:#fff;color:#000;font-weight:bold}
-.small{font-size:11px;opacity:.7}
-.delete-text{color:#ff4d4d;font-size:11px;margin-top:4px;cursor:pointer}
+.small{font-size:10px;opacity:.7}
+.delete-text{color:#ff4d4d;font-size:10px;margin-top:3px;cursor:pointer}
 .account-header{cursor:pointer}
-.arrow{margin-left:6px;font-size:12px;cursor:pointer}
-input[type="color"]{width:32px;height:32px;border-radius:50%;border:none}
+.arrow{margin-left:5px;font-size:11px;cursor:pointer}
+input[type="color"]{width:28px;height:28px;border-radius:50%;border:none}
 </style>
 </head>
 <body>
@@ -39,7 +40,7 @@ input[type="color"]{width:32px;height:32px;border-radius:50%;border:none}
 <span id="toggleIcon">+</span>
 </div>
 <div id="accountForm" style="display:none">
-<div style="display:flex;gap:8px">
+<div style="display:flex;gap:6px">
 <input id="accountName" placeholder="Nova conta" />
 <input id="accountColor" type="color" value="#ffffff" />
 </div>
@@ -128,26 +129,18 @@ save();render();}
 
 function deleteItem(ai,si,ii){data[ai].sections[si].items.splice(ii,1);save();render();}
 
-// DRAG REAL FUNCIONANDO
-function touchStart(ai,si,ii){
-  dragIndex = { ai, si, ii };
-}
+// DRAG FUNCIONAL
+function touchStart(ai,si,ii){ dragIndex = { ai, si, ii }; }
 
 function touchMove(e, ai, si){
   if(!dragIndex) return;
-
   const touch = e.touches[0];
   const elements = document.elementsFromPoint(touch.clientX, touch.clientY);
-
   const target = elements.find(el => el.classList?.contains('item'));
   if(!target) return;
-
-  const parent = target.parentNode;
-  const children = Array.from(parent.querySelectorAll('.item'));
+  const children = Array.from(target.parentNode.querySelectorAll('.item'));
   const newIndex = children.indexOf(target);
-
   const arr = data[ai].sections[si].items;
-
   if(newIndex >= 0 && newIndex !== dragIndex.ii){
     const moved = arr.splice(dragIndex.ii, 1)[0];
     arr.splice(newIndex, 0, moved);
@@ -156,10 +149,7 @@ function touchMove(e, ai, si){
   }
 }
 
-function touchEnd(){
-  dragIndex = null;
-  save();
-}
+function touchEnd(){ dragIndex=null; save(); }
 
 function render(){
 let el=document.getElementById('accounts');el.innerHTML='';
@@ -182,6 +172,7 @@ sec.items.forEach((it,ii)=>{
 secTotal+=it.value;
 let parcelaTxt='';
 if(it.parcelas){let a=String(it.atual).padStart(2,'0');let t=String(it.parcelas).padStart(2,'0');parcelaTxt=` (${a}/${t})`;}
+
 let dueTxt=(it.due && sec.name==='Contas Recorrentes')?`<div class='small'>dia ${it.due}</div>`:'';
 
 if(acc.editing && acc.editing.si===si && acc.editing.ii===ii){
@@ -198,11 +189,12 @@ secDiv.innerHTML+=`<div class='item'
  ontouchstart='touchStart(${ai},${si},${ii})'
  ontouchmove='touchMove(event, ${ai}, ${si})'
  ontouchend='touchEnd()'>
-<span onclick='startEdit(${ai},${si},${ii})'>${it.name}${parcelaTxt}${dueTxt}</span>
+<span style="color:${acc.color}" onclick='startEdit(${ai},${si},${ii})'>${it.name}${parcelaTxt}</span>
 <span>
-${brl(it.value)}
+<span style="color:${acc.color}">${brl(it.value)}</span>
 ${it.parcelas?`<span class='arrow' onclick='event.stopPropagation(); nextParcela(${ai},${si},${ii})'>➡️</span>`:''}
 </span>
+${dueTxt}
 </div>`;
 }
 });
