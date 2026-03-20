@@ -173,7 +173,7 @@ secTotal+=it.value;
 let parcelaTxt='';
 if(it.parcelas){let a=String(it.atual).padStart(2,'0');let t=String(it.parcelas).padStart(2,'0');parcelaTxt=` (${a}/${t})`;}
 
-let dueTxt=(it.due && sec.name==='Contas Recorrentes')?`<div class='small'>dia ${it.due}</div>`:'';
+let dueTxt=(it.due && sec.name==='Contas Recorrentes')?`<div class='small' style="color:#aaa">dia ${it.due}</div>`:'';
 
 if(acc.editing && acc.editing.si===si && acc.editing.ii===ii){
 secDiv.innerHTML+=`<div>
