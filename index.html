@@ -88,6 +88,13 @@ function handleClick(ai, si, ii){
   lastTap = now;
 }
 
+// MOSTRAR LIMPAR
+function toggleClear(ai, si){
+  if(!data[ai].showClear) data[ai].showClear = {};
+  data[ai].showClear[si] = !data[ai].showClear[si];
+  render();
+}
+
 function toggleNotes(){
 let area=document.getElementById('notesArea');
 let icon=document.getElementById('notesToggle');
@@ -117,7 +124,15 @@ let name = document.getElementById('accountName').value.trim();
 let color = document.getElementById('accountColor').value || '#ffffff';
 if(!name){ alert('Digite um nome'); return; }
 
-data.push({name,color,sections:defaultSections(),editing:null,showForm:{},editingAccount:false});
+data.push({
+name,
+color,
+sections:defaultSections(),
+editing:null,
+showForm:{},
+editingAccount:false,
+showClear:{} // 👈 novo
+});
 
 document.getElementById('accountName').value='';
 save();render();
@@ -163,50 +178,49 @@ save();render();}
 
 function deleteItem(ai,si,ii){data[ai].sections[si].items.splice(ii,1);save();render();}
 
-// LIMPAR SEÇÃO
+// LIMPAR
 function clearSection(ai, si){
-  if(confirm('Deseja limpar todos os itens dessa seção?')){
-    data[ai].sections[si].items = [];
-    save();
-    render();
-  }
+if(confirm('Deseja limpar todos os itens dessa seção?')){
+data[ai].sections[si].items=[];
+save();render();
+}
 }
 
-// DRAG
+// DRAG (inalterado)
 function touchStart(ai, si, ii) {
-  dragIndex = { ai, si, ii };
-  isDragging = false;
-  setTimeout(() => { isDragging = true; }, 150);
+dragIndex = { ai, si, ii };
+isDragging = false;
+setTimeout(() => { isDragging = true; }, 150);
 }
 
 function touchMove(e, ai, si) {
-  if (!dragIndex || !isDragging) return;
+if (!dragIndex || !isDragging) return;
 
-  const touch = e.touches[0];
-  const elements = document.elementsFromPoint(touch.clientX, touch.clientY);
-  const target = elements.find(el => el.classList?.contains('item'));
+const touch = e.touches[0];
+const elements = document.elementsFromPoint(touch.clientX, touch.clientY);
+const target = elements.find(el => el.classList?.contains('item'));
 
-  if (!target) return;
+if (!target) return;
 
-  const list = Array.from(target.parentNode.querySelectorAll('.item'));
-  const newIndex = list.indexOf(target);
-  const arr = data[ai].sections[si].items;
+const list = Array.from(target.parentNode.querySelectorAll('.item'));
+const newIndex = list.indexOf(target);
+const arr = data[ai].sections[si].items;
 
-  if (newIndex >= 0 && newIndex !== dragIndex.ii) {
-    const moved = arr.splice(dragIndex.ii, 1)[0];
-    arr.splice(newIndex, 0, moved);
-    dragIndex.ii = newIndex;
-    render();
-  }
+if (newIndex >= 0 && newIndex !== dragIndex.ii) {
+const moved = arr.splice(dragIndex.ii, 1)[0];
+arr.splice(newIndex, 0, moved);
+dragIndex.ii = newIndex;
+render();
+}
 }
 
 function touchEnd(ai, si, ii) {
-  if (!isDragging) {
-    handleClick(ai, si, ii);
-  }
-  dragIndex = null;
-  isDragging = false;
-  save();
+if (!isDragging) {
+handleClick(ai, si, ii);
+}
+dragIndex = null;
+isDragging = false;
+save();
 }
 
 function render(){
@@ -226,10 +240,13 @@ let secTotal=0;
 let secDiv=document.createElement('div');secDiv.className='section';
 
 secDiv.innerHTML=`<div class='section-header'>
-<strong>${sec.name}</strong>
+<strong onclick='toggleClear(${ai},${si})'>${sec.name}</strong>
 <span class='add-btn' onclick='toggleForm(${ai},${si})'>+</span>
-</div>
-<div class='delete-text' onclick='clearSection(${ai},${si})'>Limpar</div>`;
+</div>`;
+
+if(acc.showClear && acc.showClear[si]){
+secDiv.innerHTML+=`<div class='delete-text' onclick='clearSection(${ai},${si})'>Limpar</div>`;
+}
 
 sec.items.forEach((it,ii)=>{
 secTotal+=it.value;
