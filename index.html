@@ -29,7 +29,6 @@ border-radius:6px
 }
 
 .item:active{background:#2a2a2c}
-
 .total{margin-top:2px;font-weight:bold}
 
 input,button,textarea{
@@ -42,7 +41,6 @@ font-size:12px
 }
 
 button{background:#fff;color:#000;font-weight:bold}
-
 .small{font-size:9px;opacity:.7}
 
 .delete-text{
@@ -53,7 +51,6 @@ cursor:pointer
 }
 
 .account-header{cursor:pointer}
-
 .arrow{margin-left:4px;font-size:10px;cursor:pointer}
 
 input[type="color"]{
@@ -72,10 +69,9 @@ border:none;
 outline:none
 }
 </style>
-
 </head>
-<body>
 
+<body>
 <header contenteditable="true" id="title"></header>
 <div class="container">
 
@@ -109,10 +105,242 @@ outline:none
 </div>
 
 <script>
-// 👉 TODO O JS CONTINUA EXATAMENTE IGUAL AO QUE VOCÊ JÁ TEM
-// (não alterei absolutamente nada nele)
+let data = JSON.parse(localStorage.getItem('financeAppPRO')) || [];
+let notes = localStorage.getItem('notes') || '';
+let dragIndex = null;
+let isDragging = false;
 
+let titleSaved = localStorage.getItem('appTitle') || 'Meu Controle';
+const titleEl=document.getElementById('title');
+titleEl.innerText=titleSaved;
+titleEl.onblur=()=>localStorage.setItem('appTitle',titleEl.innerText);
+
+const notesInput=document.getElementById('notesInput');
+notesInput.value=notes;
+notesInput.oninput=()=>localStorage.setItem('notes',notesInput.value);
+
+// DUPLO TOQUE
+let lastTap = 0;
+function handleClick(ai, si, ii){
+  const now = Date.now();
+  if(now - lastTap < 300){
+    startEdit(ai, si, ii);
+  }
+  lastTap = now;
+}
+
+// MOSTRAR LIMPAR
+function toggleClear(ai, si){
+  if(!data[ai].showClear) data[ai].showClear = {};
+  data[ai].showClear[si] = !data[ai].showClear[si];
+  render();
+}
+
+function toggleNotes(){
+let area=document.getElementById('notesArea');
+let icon=document.getElementById('notesToggle');
+if(area.style.display==='none'){area.style.display='block';icon.innerText='▲'}
+else{area.style.display='none';icon.innerText='▼'}
+}
+
+function save(){localStorage.setItem('financeAppPRO',JSON.stringify(data));}
+function brl(v){return v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});}
+function parseValue(v){return parseFloat(v.replace(',','.'))||0;}
+
+function toggleAccountForm(){
+let f=document.getElementById('accountForm');
+let icon=document.getElementById('toggleIcon');
+if(f.style.display==='none'){f.style.display='block';icon.innerText='−'}
+else{f.style.display='none';icon.innerText='+'}
+}
+
+function defaultSections(){return[
+{name:'Contas Recorrentes',items:[]},
+{name:'Contas Parceladas',items:[]},
+{name:'Gastos Diversos',items:[]}
+];}
+
+function addAccount(){
+let name = document.getElementById('accountName').value.trim();
+let color = document.getElementById('accountColor').value || '#ffffff';
+if(!name){ alert('Digite um nome'); return; }
+
+data.push({
+name,
+color,
+sections:defaultSections(),
+editing:null,
+showForm:{},
+editingAccount:false,
+showClear:{}
+});
+
+document.getElementById('accountName').value='';
+save();render();
+}
+
+function toggleAccountEdit(ai){data[ai].editingAccount=!data[ai].editingAccount;render();}
+function deleteAccount(ai){data.splice(ai,1);save();render();}
+
+function toggleForm(ai,si){data[ai].showForm[si]=!data[ai].showForm[si];data[ai].editing=null;render();}
+function startEdit(ai,si,ii){data[ai].editing={si,ii};render();}
+
+function nextParcela(ai,si,ii){
+let item=data[ai].sections[si].items[ii];
+if(item.parcelas && item.atual < item.parcelas){item.atual++;}
+save();render();
+}
+
+function saveItem(ai,si,ii=null){
+let name=document.getElementById(`name-${ai}-${si}`).value;
+let value=parseValue(document.getElementById(`value-${ai}-${si}`).value);
+let due=null;let parcelas=null;
+
+if(data[ai].sections[si].name==='Contas Recorrentes'){
+due=document.getElementById(`due-${ai}-${si}`).value;
+}
+if(data[ai].sections[si].name==='Contas Parceladas'){
+parcelas=parseInt(document.getElementById(`parc-${ai}-${si}`)?.value) || (ii!==null ? data[ai].sections[si].items[ii].parcelas : 1);
+}
+
+if(!name||!value)return;
+
+if(ii!==null){
+let it=data[ai].sections[si].items[ii];
+it.name=name;it.value=value;it.due=due;
+if(parcelas) it.parcelas=parcelas;
+}else{
+data[ai].sections[si].items.push({name,value,due,parcelas,atual:1});
+}
+
+data[ai].showForm[si]=false;
+data[ai].editing=null;
+save();render();}
+
+function deleteItem(ai,si,ii){data[ai].sections[si].items.splice(ii,1);save();render();}
+
+function clearSection(ai, si){
+if(confirm('Deseja limpar todos os itens dessa seção?')){
+data[ai].sections[si].items=[];
+save();render();
+}
+}
+
+// DRAG original mantido
+function touchStart(ai, si, ii) {
+dragIndex = { ai, si, ii };
+isDragging = false;
+setTimeout(() => { isDragging = true; }, 150);
+}
+
+function touchMove(e, ai, si) {
+if (!dragIndex || !isDragging) return;
+
+const touch = e.touches[0];
+const elements = document.elementsFromPoint(touch.clientX, touch.clientY);
+const target = elements.find(el => el.classList?.contains('item'));
+
+if (!target) return;
+
+const list = Array.from(target.parentNode.querySelectorAll('.item'));
+const newIndex = list.indexOf(target);
+const arr = data[ai].sections[si].items;
+
+if (newIndex >= 0 && newIndex !== dragIndex.ii) {
+const moved = arr.splice(dragIndex.ii, 1)[0];
+arr.splice(newIndex, 0, moved);
+dragIndex.ii = newIndex;
+render();
+}
+}
+
+function touchEnd(ai, si, ii) {
+if (!isDragging) {
+handleClick(ai, si, ii);
+}
+dragIndex = null;
+isDragging = false;
+save();
+}
+
+function render(){
+let el=document.getElementById('accounts');el.innerHTML='';
+let grand=0;
+
+data.forEach((acc,ai)=>{
+let accTotal=0;
+let card=document.createElement('div');card.className='card';
+
+let header=`<div class='account-header' style="color:${acc.color}" onclick="toggleAccountEdit(${ai})">${acc.name}</div>`;
+if(acc.editingAccount){header+=`<div class='delete-text' onclick='deleteAccount(${ai})'>Excluir conta</div>`;}
+card.innerHTML=header;
+
+acc.sections.forEach((sec,si)=>{
+let secTotal=0;
+let secDiv=document.createElement('div');secDiv.className='section';
+
+secDiv.innerHTML=`<div class='section-header'>
+<strong onclick='toggleClear(${ai},${si})'>${sec.name}</strong>
+<span class='add-btn' onclick='toggleForm(${ai},${si})'>+</span>
+</div>`;
+
+if(acc.showClear && acc.showClear[si]){
+secDiv.innerHTML+=`<div class='delete-text' onclick='clearSection(${ai},${si})'>Limpar</div>`;
+}
+
+sec.items.forEach((it,ii)=>{
+secTotal+=it.value;
+let parcelaTxt='';
+if(it.parcelas){let a=String(it.atual).padStart(2,'0');let t=String(it.parcelas).padStart(2,'0');parcelaTxt=` (${a}/${t})`;}
+let dueTxt=(it.due && sec.name==='Contas Recorrentes')?`<div class='small' style="color:#aaa">dia ${it.due}</div>`:'';
+
+if(acc.editing && acc.editing.si===si && acc.editing.ii===ii){
+secDiv.innerHTML+=`<div>
+<input id='name-${ai}-${si}' value='${it.name}'>
+<input id='value-${ai}-${si}' inputmode='decimal' value='${it.value}'>
+${sec.name==='Contas Recorrentes'?`<input id='due-${ai}-${si}' inputmode='numeric' value='${it.due||''}'>`:''}
+${sec.name==='Contas Parceladas'?`<input id='parc-${ai}-${si}' inputmode='numeric' value='${it.parcelas||''}'>`:''}
+<button onclick='saveItem(${ai},${si},${ii})'>Salvar</button>
+<div class='delete-text' onclick='deleteItem(${ai},${si},${ii})'>Excluir</div>
+</div>`;
+}else{
+secDiv.innerHTML+=`<div class='item'
+ ontouchstart='touchStart(${ai},${si},${ii})'
+ ontouchmove='touchMove(event, ${ai}, ${si})'
+ ontouchend='touchEnd(${ai},${si},${ii})'>
+<span style="color:${acc.color}" onclick='handleClick(${ai},${si},${ii})'>${it.name}${parcelaTxt}${dueTxt}</span>
+<span>
+<span style="color:${acc.color}">${brl(it.value)}</span>
+${it.parcelas?`<span class='arrow' onclick='event.stopPropagation(); nextParcela(${ai},${si},${ii})'>➡️</span>`:''}
+</span>
+</div>`;
+}
+});
+
+if(acc.showForm[si]){
+secDiv.innerHTML+=`<div>
+<input id='name-${ai}-${si}' placeholder='Descrição'>
+<input id='value-${ai}-${si}' inputmode='decimal' placeholder='R$'>
+${sec.name==='Contas Recorrentes'?`<input id='due-${ai}-${si}' inputmode='numeric' placeholder='Vencimento'>`:''}
+${sec.name==='Contas Parceladas'?`<input id='parc-${ai}-${si}' inputmode='numeric' placeholder='Parcelas'>`:''}
+<button onclick='saveItem(${ai},${si})'>Salvar</button>
+</div>`;
+}
+
+secDiv.innerHTML+=`<div class='total'>Total: ${brl(secTotal)}</div>`;
+card.appendChild(secDiv);
+accTotal+=secTotal;
+});
+
+card.innerHTML+=`<div class='total'>Total Conta: ${brl(accTotal)}</div>`;
+el.appendChild(card);
+grand+=accTotal;
+});
+
+document.getElementById('grandTotal').innerHTML=`Total Geral: ${brl(grand)}`;
+}
+
+render();
 </script>
-
 </body>
 </html>
