@@ -153,22 +153,39 @@ save();render();}
 
 function deleteItem(ai,si,ii){data[ai].sections[si].items.splice(ii,1);save();render();}
 
-// DRAG FUNCIONAL E ESTÁVEL
-function touchStart(ai, si, ii) {
+// DRAG NÍVEL IPHONE (suave + real)
+let dragIndex = null;
+let isDragging = false;
+let startY = 0;
+let currentEl = null;
+
+function touchStart(ai, si, ii, e) {
   dragIndex = { ai, si, ii };
+  startY = e.touches[0].clientY;
   isDragging = false;
+  currentEl = e.currentTarget;
 
   setTimeout(() => {
     isDragging = true;
-  }, 150);
+    currentEl.style.transition = 'none';
+    currentEl.style.zIndex = '1000';
+    currentEl.style.transform = 'scale(1.05)';
+  }, 120);
 }
 
 function touchMove(e, ai, si) {
   if (!dragIndex || !isDragging) return;
 
   const touch = e.touches[0];
+  const deltaY = touch.clientY - startY;
+
+  // movimento visual suave
+  if (currentEl) {
+    currentEl.style.transform = `translateY(${deltaY}px) scale(1.05)`;
+  }
+
   const elements = document.elementsFromPoint(touch.clientX, touch.clientY);
-  const target = elements.find(el => el.classList?.contains('item'));
+  const target = elements.find(el => el.classList?.contains('item') && el !== currentEl);
 
   if (!target) return;
 
@@ -180,6 +197,12 @@ function touchMove(e, ai, si) {
     const moved = arr.splice(dragIndex.ii, 1)[0];
     arr.splice(newIndex, 0, moved);
     dragIndex.ii = newIndex;
+
+    // animação dos outros itens
+    list.forEach(el => {
+      el.style.transition = 'transform 0.2s ease';
+    });
+
     render();
   }
 }
@@ -188,6 +211,18 @@ function touchEnd(ai, si, ii) {
   if (!isDragging) {
     startEdit(ai, si, ii);
   }
+
+  if (currentEl) {
+    currentEl.style.transition = 'transform 0.2s ease';
+    currentEl.style.transform = 'scale(1)';
+    currentEl.style.zIndex = 'auto';
+  }
+
+  dragIndex = null;
+  isDragging = false;
+  currentEl = null;
+  save();
+}
 
   dragIndex = null;
   isDragging = false;
